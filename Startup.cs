@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -13,6 +14,8 @@ using InventoryService.Entities;
 using InventoryService.Clients;
 using Play.Common.Repositories;
 using Play.Common.Settings;
+using Polly;
+using Polly.Timeout;
 
 namespace InventoryService
 {
@@ -42,7 +45,11 @@ namespace InventoryService
             services.AddHttpClient<CatalogClient>(client =>
             {
                 client.BaseAddress = new Uri("https://localhost:5001/");
-            });
+            })
+            .AddTransientHttpErrorPolicy(policyBuilder => policyBuilder.WaitAndRetryAsync(
+                3, retryAttempt => TimeSpan.FromSeconds(2)
+            ))
+            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(1));
 
             services.AddControllers(option => option.SuppressAsyncSuffixInActionNames = false);
 
