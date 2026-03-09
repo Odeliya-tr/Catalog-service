@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo
+    ports:
+      - "27017:27017"
+
+  catalog-service:
+    build: ./CatalogService
+    ports:
+      - "5000:80"
+    depends_on:
+      - mongodb
+
+  inventory-service:
+    build: ./InventoryService
+    ports:
+      - "5001:80"
+    depends_on:
+      - mongodb
