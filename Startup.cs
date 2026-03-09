@@ -49,7 +49,10 @@ namespace InventoryService
             .AddTransientHttpErrorPolicy(policyBuilder => policyBuilder.WaitAndRetryAsync(
                 3, retryAttempt => TimeSpan.FromSeconds(2)
             ))
-            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(1));
+            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(1))
+            .AddTransientHttpErrorPolicy(policyBuilder => policyBuilder.CircuitBreakerAsync(
+                3, TimeSpan.FromSeconds(15)
+            ));
 
             services.AddControllers(option => option.SuppressAsyncSuffixInActionNames = false);
 
