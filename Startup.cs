@@ -18,6 +18,8 @@ using Play.Common.MassTransit;
 using Polly;
 using Polly.Timeout;
 using MassTransit;
+using InventoryService.Consumers;
+using InventoryService.Entities;
 
 namespace InventoryService
 {
@@ -44,6 +46,12 @@ namespace InventoryService
                 return new MongoRepository<InventoryItem>(database, "inventoryitems");
             });
 
+            services.AddSingleton<IRepository<CatalogItem>>(serviceProvider =>
+            {
+                var database = serviceProvider.GetRequiredService<IMongoDatabase>();
+                return new MongoRepository<CatalogItem>(database, "catalogitems");
+            });
+
             services.AddHttpClient<CatalogClient>(client =>
             {
                 client.BaseAddress = new Uri("https://localhost:5001/");
@@ -61,6 +69,19 @@ namespace InventoryService
                 config.UsingRabbitMq((context, configurator) =>
                 {
                     configurator.Host("rabbitmq");
+                });
+            });
+            services.AddMassTransit(config =>
+            {
+                config.AddConsumer<CatalogItemCreatedConsumer>();
+
+                config.UsingRabbitMq((context, configurator) =>
+                {
+                    configurator.Host("rabbitmq");
+                    configurator.ReceiveEndpoint("catalog-items-created", endpoint =>
+                    {
+                        endpoint.ConfigureConsumer<CatalogItemCreatedConsumer>(context);
+                    });
                 });
             });
             services.AddMassTransitHostedService();
