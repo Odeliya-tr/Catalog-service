@@ -14,6 +14,7 @@ using InventoryService.Entities;
 using InventoryService.Clients;
 using Play.Common.Repositories;
 using Play.Common.Settings;
+using Play.Common.MassTransit;
 using Polly;
 using Polly.Timeout;
 using MassTransit;
