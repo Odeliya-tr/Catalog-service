@@ -1,5 +1,4 @@
 using System;
-using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -10,65 +9,70 @@ using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
-using InventoryService.Entities;
-using InventoryService.Clients;
-using Play.Common.Repositories;
+using CatalogService.Repositories;
+using CatalogService.Entities;
 using Play.Common.Settings;
-using Polly;
-using Polly.Timeout;
+using Play.Common.Repositories;
+using MassTransit;
 
-namespace InventoryService
+namespace CatalogService
 {
-    public record Startup(IConfiguration Configuration)
+    public class Startup
     {
+        public Startup(IConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
+
+        public IConfiguration Configuration { get; }
+
+        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             BsonSerializer.RegisterSerializer(new GuidSerializer(BsonType.String));
             BsonSerializer.RegisterSerializer(new DateTimeOffsetSerializer(BsonType.String));
 
-            var mongoDbSettings = Configuration.GetSection(nameof(MongoDbSettings)).Get<MongoDbSettings>();
-            var serviceSettings = Configuration.GetSection(nameof(ServiceSettings)).Get<ServiceSettings>();
+            var mongoDbSettings = Configuration.GetSection("MongoDbSettings").Get<MongoDbSettings>();
+            var serviceSettings = Configuration.GetSection("ServiceSettings").Get<ServiceSettings>();
 
             var mongoClient = new MongoClient($"mongodb://{mongoDbSettings.Host}:{mongoDbSettings.Port}");
 
-            services.AddSingleton(serviceProvider =>
+            services.AddSingleton<IMongoDatabase>(serviceProvider =>
             {
                 return mongoClient.GetDatabase(serviceSettings.ServiceName);
             });
 
-            services.AddSingleton<IRepository<InventoryItem>>(serviceProvider =>
+            services.AddSingleton<IRepository<Item>>(serviceProvider =>
             {
                 var database = serviceProvider.GetRequiredService<IMongoDatabase>();
-                return new MongoRepository<InventoryItem>(database, "inventoryitems");
+                return new MongoRepository<Item>(database, "items");
             });
 
-            services.AddHttpClient<CatalogClient>(client =>
+            services.AddMassTransit(config =>
             {
-                client.BaseAddress = new Uri("https://localhost:5001/");
-            })
-            .AddTransientHttpErrorPolicy(policyBuilder => policyBuilder.WaitAndRetryAsync(
-                3, retryAttempt => TimeSpan.FromSeconds(2)
-            ))
-            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(1))
-            .AddTransientHttpErrorPolicy(policyBuilder => policyBuilder.CircuitBreakerAsync(
-                3, TimeSpan.FromSeconds(15)
-            ));
+                config.UsingRabbitMq((context, configurator) =>
+                {
+                    configurator.Host("rabbitmq");
+                });
+            });
+            services.AddMassTransitHostedService();
 
             services.AddControllers(option => option.SuppressAsyncSuffixInActionNames = false);
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "InventoryService", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "CatalogService", Version = "v1" });
             });
         }
 
+        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "InventoryService v1"));
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "CatalogService v1"));
             }
 
             app.UseHttpsRedirection();
