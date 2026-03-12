@@ -74,6 +74,8 @@ namespace InventoryService
             services.AddMassTransit(config =>
             {
                 config.AddConsumer<CatalogItemCreatedConsumer>();
+                config.AddConsumer<CatalogItemUpdatedConsumer>();
+                config.AddConsumer<CatalogItemDeletedConsumer>();
 
                 config.UsingRabbitMq((context, configurator) =>
                 {
@@ -81,6 +83,14 @@ namespace InventoryService
                     configurator.ReceiveEndpoint("catalog-items-created", endpoint =>
                     {
                         endpoint.ConfigureConsumer<CatalogItemCreatedConsumer>(context);
+                    });
+                    configurator.ReceiveEndpoint("catalog-items-updated", endpoint =>
+                    {
+                        endpoint.ConfigureConsumer<CatalogItemUpdatedConsumer>(context);
+                    });
+                    configurator.ReceiveEndpoint("catalog-items-deleted", endpoint =>
+                    {
+                        endpoint.ConfigureConsumer<CatalogItemDeletedConsumer>(context);
                     });
                 });
             });

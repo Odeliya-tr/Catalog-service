@@ -6,12 +6,19 @@ services:
     ports:
       - "27017:27017"
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
   catalog-service:
     build: ./CatalogService
     ports:
       - "5000:80"
     depends_on:
       - mongodb
+      - rabbitmq
 
   inventory-service:
     build: ./InventoryService
@@ -19,3 +26,4 @@ services:
       - "5001:80"
     depends_on:
       - mongodb
+      - rabbitmq
