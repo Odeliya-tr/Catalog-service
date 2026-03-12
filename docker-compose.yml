@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mongodb:
     image: mongo
@@ -13,17 +11,25 @@ services:
       - "15672:15672"
 
   catalog-service:
-    build: ./CatalogService
+    build:
+      context: .
+      dockerfile: CatalogService/Dockerfile
     ports:
-      - "5000:80"
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
       - mongodb
       - rabbitmq
 
   inventory-service:
-    build: ./InventoryService
+    build:
+      context: .
+      dockerfile: InventoryService/Dockerfile
     ports:
-      - "5001:80"
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
       - mongodb
       - rabbitmq
