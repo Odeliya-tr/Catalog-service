@@ -6,7 +6,6 @@ using InventoryService.Dtos;
 using InventoryService.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Play.Common.Repositories;
-using Play.Common.Repositories;
 
 namespace InventoryService.Controllers
 {
